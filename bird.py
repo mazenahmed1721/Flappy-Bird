@@ -6,12 +6,15 @@ from settings import (
     BIRD_RADIUS,
     BIRD_YELLOW,
     BIRD_ORANGE,
+    BIRD_WING,
     WHITE,
     BLACK,
     GRAVITY,
     FLAP_VELOCITY,
     MAX_FALL_SPEED,
 )
+WING_OFFSETS = (-3, 1, 5, 1)
+WING_FPS = 12
 class Bird:
     def __init__(self):
         self.x = BIRD_START_X
@@ -21,9 +24,12 @@ class Bird:
         self.y = float(BIRD_START_Y)
         self.velocity = 0.0
         self.idle_time = 0.0
+        self.anim_time = 0.0
     def idle(self, dt):
         self.idle_time += dt
         self.y = BIRD_START_Y + math.sin(self.idle_time * 5) * 6
+    def animate(self,dt):
+        self.anim_time +=dt
     def flap(self):
         self.velocity = FLAP_VELOCITY
     def update(self, dt):
@@ -42,17 +48,24 @@ class Bird:
         hit_radius = self.radius - 2
         return dx * dx + dy * dy < hit_radius * hit_radius
     def draw(self, surface):
-        center = (int(self.x), int(self.y))
-        pygame.draw.circle(surface, BIRD_YELLOW, center, self.radius)
-        pygame.draw.circle(surface, BLACK, center, self.radius, 2)
-        eye = (center[0] + 5, center[1] - 4)
-        pygame.draw.circle(surface, WHITE, eye, 5)
-        pygame.draw.circle(surface, BLACK, (eye[0] + 1, eye[1]), 2)
-        beak = [
-            (center[0] + self.radius - 2, center[1] -2),
-            (center[0] + self.radius + 9, center[1] + 2),
-            (center[0] + self.radius - 2, center[1] + 6),
-        ]
-        pygame.draw.polygon(surface, BIRD_ORANGE, beak)
-        pygame.draw.polygon(surface, BLACK, beak, 2)
+        r = self.radius
+        size = r * 4
+        c = size // 2
+        sprite = pygame.Surface((size, size), pygame.SRCALPHA)
+        pygame.draw.circle(sprite, BIRD_YELLOW, (c, c), r)
+        pygame.draw.circle(sprite, BLACK, (c, c), r, 2)
+        beak = [(c + r - 2, c-2), (c + r + 9, c + 2), (c + r - 2, c + 6)]
+        pygame.draw.polygon(sprite, BIRD_ORANGE, beak)
+        pygame.draw.polygon(sprite, BLACK, beak, 2)
+        eye = (c + 5, c - 4)
+        pygame.draw.circle(sprite, WHITE, eye, 5)
+        pygame.draw.circle(sprite, BLACK, (eye[0] + 1, eye[1]), 2)
+        frame = int(self.anim_time * WING_FPS) % len(WING_OFFSETS)
+        wing = pygame.Rect(c - 11,c + WING_OFFSETS[frame], 14, 9)
+        pygame.draw.ellipse(sprite, BIRD_WING, wing)
+        pygame.draw.ellipse(sprite, BLACK, wing, 2)
+        angle = max(-80.0, min(30.0, 30.0 -self.velocity * 0.08))
+        rotated = pygame.transform.rotate(sprite, angle)
+        rect = rotated.get_rect(center=(int(self.x), int(self.y)))
+        surface.blit(rotated, rect)
         

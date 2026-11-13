@@ -1,5 +1,6 @@
 import sys
 import pygame
+from background import Background, Ground
 from bird import Bird
 from pipe import Pipe
 from settings import (
@@ -7,7 +8,8 @@ from settings import (
     SCREEN_HEIGHT,
     FPS,
     TITLE,
-    SKY_BLUE,
+    SKY_TOP,
+    SKY_BOTTOM,
     GROUND_BROWN,
     GROUND_GREEN,
     GROUND_DARK_GREEN,
@@ -39,6 +41,8 @@ class Game:
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         pygame.display.set_caption(TITLE)
         self.clock = pygame.time.Clock()
+        self.background = Background()
+        self.ground = Ground()
         self.bird = Bird()
         self.pipes = []
         self.ground_offset = 0.0
@@ -83,9 +87,9 @@ class Game:
                     self.on_action()
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 self.on_action()
-    def scroll_ground(self, dt):
-        self.ground_offset = (self.ground_offset + PIPE_SPEED * dt) % 40
-    def scroll_pipes(self, dt):
+    def scroll_world(self, dt):
+        self.background.update(dt)
+        self.ground.update(dt, PIPE_SPEED)
         for pipe in self.pipes:
             pipe.update(dt, PIPE_SPEED)
         self.pipes = [pipe for pipe in self.pipes if not pipe.is_off_screen()]
@@ -111,11 +115,13 @@ class Game:
     def update(self, dt):
         if self.state == STATE_READY:
             self.bird.idle(dt)
-            self.scroll_ground(dt)
+            self.bird.animate(dt)
+            self.background.update(dt)
+            self.ground.update(dt, PIPE_SPEED)            
         elif self.state == STATE_PLAYING:
             self.bird.update(dt)
-            self.scroll_ground(dt)
-            self.scroll_pipes(dt)
+            self.bird.animate(dt)
+            self.scroll_world(dt)
             self.update_score()
             if self.hit_floor() or self.hit_pipe():
                 self.game_over()
@@ -141,10 +147,10 @@ class Game:
             draw_text(self.screen,"Press SPACE to restart", 28, (cx, panel.bottom + 66))
     def draw(self):
         cx = SCREEN_WIDTH // 2
-        self.screen.fill(SKY_BLUE)
+        self.background.draw(self.screen)
         for pipe in self.pipes:
             pipe.draw(self.screen)
-        draw_ground(self.screen, self.ground_offset)
+        self.ground.draw(self.screen)
         self.bird.draw(self.screen)
         if self.state == STATE_READY:
             draw_text(self.screen, "GET READY", 56, (cx, 170))
