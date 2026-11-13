@@ -1,3 +1,4 @@
+import math
 import pygame
 from settings import (
     BIRD_START_X,
@@ -10,17 +11,19 @@ from settings import (
     GRAVITY,
     FLAP_VELOCITY,
     MAX_FALL_SPEED,
-    GROUND_Y,
 )
 class Bird:
     def __init__(self):
         self.x = BIRD_START_X
-        self.y = float(BIRD_START_Y)
-        self.velocity = 0.0
         self.radius = BIRD_RADIUS
+        self.reset()
     def reset(self):
         self.y = float(BIRD_START_Y)
         self.velocity = 0.0
+        self.idle_time = 0.0
+    def idle(self, dt):
+        self.idle_time += dt
+        self.y = BIRD_START_Y + math.sin(self.idle_time * 5) * 6
     def flap(self):
         self.velocity = FLAP_VELOCITY
     def update(self, dt):
@@ -31,9 +34,13 @@ class Bird:
         if self.y - self.radius < 0:
             self.y = self.radius
             self.velocity = 0.0
-        if self.y + self.radius > GROUND_Y:
-            self.y = GROUND_Y - self.radius
-            self.velocity = 0.0
+    def collide_with_rect(self, rect):
+        nearest_x = max(rect.left, min(self.x, rect.right))
+        nearest_y = max(rect.top, min(self.y, rect.bottom))
+        dx = self.x - nearest_x
+        dy = self.y - nearest_y
+        hit_radius = self.radius - 2
+        return dx * dx + dy * dy < hit_radius * hit_radius
     def draw(self, surface):
         center = (int(self.x), int(self.y))
         pygame.draw.circle(surface, BIRD_YELLOW, center, self.radius)
