@@ -1,3 +1,4 @@
+import asyncio
 import random
 import sys
 import pygame
@@ -242,13 +243,13 @@ class Game:
         self.screen.fill(BLACK)
         self.screen.blit(surface, offset)
         pygame.display.flip()
-    def run(self):
+    async def run(self):
         while self.running:
             dt = min(self.clock.tick(FPS) / 1000.0, 0.05)
             self.handle_events()
             self.update(dt)
             self.draw()
+            await asyncio.sleep(0)
         pygame.quit()
-        sys.exit()
 if __name__ == "__main__":
-    Game().run()
+    asyncio.run(Game().run())
