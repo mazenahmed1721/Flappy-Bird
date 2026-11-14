@@ -23,26 +23,23 @@ from settings import (
     GOLD,
     PANEL_BG,
 )
+from sounds import Sounds
 from storage import load_high_score, save_high_score
 from ui import draw_text
 STATE_READY = "ready"
 STATE_PLAYING = "playing"
 STATE_GAME_OVER = "game_over"
 
-def draw_ground(surface, offset):
-    pygame.draw.rect( surface, GROUND_BROWN, (0, GROUND_Y, SCREEN_WIDTH, GROUND_HEIGHT))
-    pygame.draw.rect(surface, GROUND_GREEN, (0, GROUND_Y, SCREEN_WIDTH, 12))
-    for x in range(-40, SCREEN_WIDTH + 40, 40):
-        stripe_x = x-int(offset)
-        pygame.draw.rect(surface, GROUND_DARK_GREEN, (stripe_x, GROUND_Y, 20, 12))
 class Game:
     def __init__(self):
+        pygame.mixer.pre_init(22050, -16, 1, 512)
         pygame.init()
         self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
         pygame.display.set_caption(TITLE)
         self.clock = pygame.time.Clock()
         self.background = Background()
         self.ground = Ground()
+        self.sounds = Sounds()
         self.bird = Bird()
         self.pipes = []
         self.ground_offset = 0.0
@@ -68,12 +65,16 @@ class Game:
             self.high_score = self.score
             self.new_best = True
             save_high_score(self.high_score)
+        self.sounds.play("hit")
+    def flap(self):
+        self.bird.flap()
+        self.sounds.play("flap")
     def on_action(self):
         if self.state == STATE_READY:
             self.state = STATE_PLAYING
-            self.bird.flap()
+            self.flap()
         elif self.state == STATE_PLAYING:
-            self.bird.flap()
+            self.flap()
         elif self.state == STATE_GAME_OVER and self.game_over_timer >= RESTART_DELAY:
             self.reset()
     def handle_events(self):
@@ -85,6 +86,8 @@ class Game:
                     self.running = False
                 elif event.key in (pygame.K_SPACE, pygame.K_UP):
                     self.on_action()
+                elif event.key == pygame.K_m:
+                    self.sounds.toggle()
             elif event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
                 self.on_action()
     def scroll_world(self, dt):
@@ -100,6 +103,7 @@ class Game:
             if not pipe.passed and pipe.x + pipe.width < self.bird.x:
                 pipe.passed = True
                 self.score += 1
+                self.sounds.play("score")
     def hit_floor(self):
         if self.bird.y + self.bird.radius >= GROUND_Y:
             self.bird.y = GROUND_Y - self.bird.radius
@@ -157,6 +161,8 @@ class Game:
             draw_text(self.screen, "Press SPACE or click to flap", 26, (cx, 220))
             if self.high_score > 0:
                 draw_text(self.screen, f"best: {self.high_score}", 30, (cx, 110), color=GOLD)
+            sound_state = "OFF" if self.sounds.muted else "ON"
+            draw_text(self.screen, f"Sound: {sound_state} (M)", 22, (cx, 560))
         elif self.state == STATE_PLAYING:
             draw_text(self.screen, str(self.score), 64, (cx, 70))
         else: 
